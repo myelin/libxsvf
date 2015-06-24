@@ -84,6 +84,7 @@ struct udata_s {
 	struct ftdi_context ftdic;
 	uint16_t device_vendor;
 	uint16_t device_product;
+	const char *device_string;
 	int device_channel;
 	int eeprom_size;
 	int buffer_size;
@@ -551,6 +552,12 @@ static int h_setup(struct libxsvf_host *h)
 		goto failed_device;
 	}
 
+	if (u->device_string != NULL) {
+		if (ftdi_usb_open_string(&u->ftdic, u->device_string) == 0)
+			goto found_device;
+		goto failed_device;
+	}
+
 	// 0x0403:0xcff8 = Amontec JTAGkey2P
 	if (ftdi_usb_open(&u->ftdic, 0x0403, 0xcff8) == 0) {
 		device_is_amontec_jtagkey_2p = 1;
@@ -845,7 +852,7 @@ static void help()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Usage: %s [ -v[v..] ] [ -d dumpfile ] [ -L | -B ] [ -S ] [ -F ] \\\n", progname);
 	fprintf(stderr, "      %*s [ -D vendor:product ] [ -C channel ] [ -f freq[k|M] ] \\\n", (int)(strlen(progname)+1), "");
-	fprintf(stderr, "      %*s [ -Z eeprom-size] [ [-G] -W eeprom-filename ] [ -R eeprom-filename ] \\\n", (int)(strlen(progname)+1), "");
+	fprintf(stderr, "      %*s [ -Z eeprom-size] [ [-G|-I] -W eeprom-filename ] [ -R eeprom-filename ] \\\n", (int)(strlen(progname)+1), "");
 	fprintf(stderr, "      %*s { -s svf-file | -x xsvf-file | -c } ...\n", (int)(strlen(progname)+1), "");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "   -v\n");
@@ -869,6 +876,14 @@ static void help()
 	fprintf(stderr, "   -D vendor:product\n");
 	fprintf(stderr, "          Select device using USB vendor and product id\n");
 	fprintf(stderr, "\n");
+	fprintf(stderr, "   -D device-string\n");
+	fprintf(stderr, "          use the specified USB device:\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "            d:<devicenode>                (e.g. d:002/005)\n");
+	fprintf(stderr, "            i:<vendor>:<product>          (e.g. i:0x0403:0x6010)\n");
+	fprintf(stderr, "            i:<vendor>:<product>:<index>  (e.g. i:0x0403:0x6010:0)\n");
+	fprintf(stderr, "            s:<vendor>:<product>:<serial-string>\n");
+	fprintf(stderr, "\n");
 	fprintf(stderr, "   -C channel\n");
 	fprintf(stderr, "          Select channel on target device (A, B, C or D)\n");
 	fprintf(stderr, "\n");
@@ -877,6 +892,9 @@ static void help()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "   -G\n");
 	fprintf(stderr, "          Generate checksum before writing EEPROM data\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "   -I\n");
+	fprintf(stderr, "          Ignore (do not check) checksum before writing EEPROM data\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "   -W eeprom-filename\n");
 	fprintf(stderr, "          Write content of the given file to the FTDI EEPROM\n");
@@ -901,11 +919,12 @@ int main(int argc, char **argv)
 	int rc = 0;
 	int gotaction = 0;
 	int genchecksum = 0;
+	int ignchecksum = 0;
 	int hex_mode = 0;
 	int opt, i, j;
 
 	progname = argc >= 1 ? argv[0] : "xsvftool-ft232h";
-	while ((opt = getopt(argc, argv, "vd:LBSFD:C:Z:GW:R:f:x:s:c")) != -1)
+	while ((opt = getopt(argc, argv, "vd:LBSFD:C:Z:GIW:R:f:x:s:c")) != -1)
 	{
 		switch (opt)
 		{
@@ -943,7 +962,9 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'D':
-			{
+			if (optarg[0] && optarg[1] == ':') {
+				u.device_string = optarg;
+			} else {
 				char *endptr = NULL;
 				u.device_vendor = strtol(optarg, &endptr, 16);
 				if (!endptr || *endptr != ':')
@@ -979,6 +1000,9 @@ int main(int argc, char **argv)
 		case 'G':
 			genchecksum = 1;
 			break;
+		case 'I':
+			ignchecksum = 1;
+			break;
 		case 'W':
 			{
 				gotaction = 1;
@@ -1006,7 +1030,7 @@ int main(int argc, char **argv)
 				}
 
 				uint16_t checksum_chip = (eeprom_data[u.ftdic.eeprom_size-1] << 8) | eeprom_data[u.ftdic.eeprom_size-2];
-				if (checksum != checksum_chip) {
+				if (!ignchecksum && checksum != checksum_chip) {
 					fprintf(stderr, "ERROR: Checksum from EEPROM data is invalid! (is 0x%04x instead of 0x%04x)\n",
 							checksum_chip, checksum);
 					h_shutdown(&h);
