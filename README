@@ -159,7 +159,7 @@ be set to implementations of the following functions:
 	This function is optional and the function pointer may be set to a NULL
 	pointer on implementations using the simple synchronous interface.
 
-  void pulse_tck(struct libxsvf_host *h, int tms, int tdi, int tdo, int rmask, int sync)
+  int pulse_tck(struct libxsvf_host *h, int tms, int tdi, int tdo, int rmask, int sync)
 
 	This is the main JTAG I/O callback function.
 	It must perform the following tasks:
