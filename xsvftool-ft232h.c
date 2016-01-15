@@ -246,7 +246,7 @@ static void transfer_tms_job_handler(struct udata_s *u, struct read_job_s *job, 
 		// seams like output is align to the MSB in the byte and is LSB first
 		int bitpos = i + (8 - job->bits_len);
 		int line_tdo = (*data & (1 << bitpos)) != 0 ? 1 : 0;
-		if (job->buffer[i].tdo_enable && job->buffer[i].tdo != line_tdo)
+		if (job->buffer[i].tdo_enable && job->buffer[i].tdo != line_tdo && !u->forcemode)
 			u->error_rc = -1;
 		if (job->buffer[i].rmask && u->retval_i < 256)
 			u->retval[u->retval_i++] = line_tdo;
