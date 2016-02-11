@@ -374,20 +374,33 @@ int libxsvf_svf(struct libxsvf_host *h)
 
 		if (!strtokencmp(p, "FREQUENCY")) {
 			unsigned long number = 0;
+			int got_decimal_point = 0;
+			int decimal_digits = 0;
 			int exp = 0;
 			p += strtokenskip(p);
 			if (*p < '0' || *p > '9')
 				goto syntax_error;
-			while (*p >= '0' && *p <= '9') {
-				number = number*10 + (*p - '0');
+			while ((*p >= '0' && *p <= '9') || (*p == '.')) {
+				if (*p == '.') {
+					got_decimal_point = 1;
+				} else {
+					if (got_decimal_point)
+						decimal_digits++;
+					number = number*10 + (*p - '0');
+				}
 				p++;
 			}
 			if(*p == 'E' || *p == 'e') {
 				p++;
+				if (*p == '+')
+					p++;
 				while (*p >= '0' && *p <= '9') {
 					exp = exp*10 + (*p - '0');
 					p++;
 				}
+				exp -= decimal_digits;
+				if (exp < 0)
+					goto syntax_error;
 				for(i=0; i<exp; i++)
 					number *= 10;
 			}
