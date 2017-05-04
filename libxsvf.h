@@ -99,7 +99,7 @@ struct libxsvf_host {
 	int (*pulse_tck)(struct libxsvf_host *h, int tms, int tdi, int tdo, int rmask, int sync);
 	void (*pulse_sck)(struct libxsvf_host *h);
 	void (*set_trst)(struct libxsvf_host *h, int v);
-	int (*set_frequency)(struct libxsvf_host *h, int v);
+	int (*set_frequency)(struct libxsvf_host *h, unsigned long v);
 	void (*report_tapstate)(struct libxsvf_host *h);
 	void (*report_device)(struct libxsvf_host *h, unsigned long idcode);
 	void (*report_status)(struct libxsvf_host *h, const char *message);
