@@ -25,16 +25,17 @@ extern "C" {
 }
 
 // Uncomment this to dump out a lot of debug info
-//#define NOISY
+// #define NOISY
 
 // Uncomment this to silence pretty much everything
-//#define QUIET
+#define QUIET
 
 // Uncomment this to skip delays entirely
 #define delayMicroseconds(us) ((void)(us))
 
 // Uncomment this to use faster IO for TCK (speeds up RUNTEST commands)
-// -- this only works if TCK is on pin 20 (PF5)
+// -- this only works for an ATMEGA32U4 with TCK on pin 20 (PF5)
+#ifdef __AVR__
 #define FAST_TCK_0_1() do { \
 	PORTF &= ~(1<<5); \
 	__asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t" \
@@ -43,6 +44,7 @@ extern "C" {
 	__asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t" \
 		"nop\n\t""nop\n\t""nop\n\t""nop\n\t"); \
 } while (0)
+#endif
 
 struct arduino_xsvf_user_data {
 	unsigned long frequency;
@@ -73,13 +75,15 @@ static int h_shutdown(struct libxsvf_host *h)
 static void h_udelay(struct libxsvf_host *h, long usecs, int tms, long num_tck)
 {
 	struct arduino_xsvf_user_data *u = (struct arduino_xsvf_user_data *)h->user_data;
-	// Serial.print("Delay ");
-	// Serial.print(usecs);
-	// Serial.print(" us and ");
-	// Serial.print(num_tck);
-	// Serial.println(" tcks");
-	// Serial.print("normal delay is ");
-	// Serial.println(1000000L / u->frequency);
+#ifdef NOISY
+	Serial.print("Delay ");
+	Serial.print(usecs);
+	Serial.print(" us and ");
+	Serial.print(num_tck);
+	Serial.println(" tcks");
+	Serial.print("normal delay is ");
+	Serial.println(1000000L / u->frequency);
+#endif
 
 	delayMicroseconds(usecs);
 	digitalWrite(u->tms_pin, tms ? HIGH : LOW);
@@ -93,12 +97,19 @@ static void h_udelay(struct libxsvf_host *h, long usecs, int tms, long num_tck)
 		delayMicroseconds(1000000L / u->frequency);
 #endif
 	}
+#ifdef NOISY
+	Serial.println("udelay done");
+#endif
 }
 
 static int h_getbyte(struct libxsvf_host *h)
 {
 	unsigned long now = millis();
+	if (Serial.available() == 0) {
+		Serial.println("*#"); // ask for more bytes
+	}
 	while (!Serial.available()) {
+		if (!Serial) return -1;  // Cancel on disconnect
 		if (millis() - now > 1000) {
 			Serial.println("getbyte timeout, returning EOF");
 			return -1;
@@ -212,27 +223,27 @@ static void *h_realloc(struct libxsvf_host *h, void *ptr, int size, enum libxsvf
 void arduino_play_svf(int tms_pin, int tdi_pin, int tdo_pin, int tck_pin, int trst_pin) {
 	struct arduino_xsvf_user_data u;
 	memset(&u, 0, sizeof(u));
-	u.frequency = 10000000,
-	u.tms_pin = tms_pin,
-	u.tdi_pin = tdi_pin,
-	u.tdo_pin = tdo_pin,
-	u.tck_pin = tck_pin,
+	u.frequency = 100000;
+	u.tms_pin = tms_pin;
+	u.tdi_pin = tdi_pin;
+	u.tdo_pin = tdo_pin;
+	u.tck_pin = tck_pin;
 	u.trst_pin = trst_pin;
 
 	struct libxsvf_host h;
 	memset(&h, 0, sizeof(h));
-	h.udelay = h_udelay,
-	h.setup = h_setup,
-	h.shutdown = h_shutdown,
-	h.getbyte = h_getbyte,
-	h.pulse_tck = h_pulse_tck,
-	h.set_trst = h_set_trst,
-	h.set_frequency = h_set_frequency,
-	h.report_tapstate = h_report_tapstate,
-	h.report_device = h_report_device,
-	h.report_status = h_report_status,
-	h.report_error = h_report_error,
-	h.realloc = h_realloc,
+	h.udelay = h_udelay;
+	h.setup = h_setup;
+	h.shutdown = h_shutdown;
+	h.getbyte = h_getbyte;
+	h.pulse_tck = h_pulse_tck;
+	h.set_trst = h_set_trst;
+	h.set_frequency = h_set_frequency;
+	h.report_tapstate = h_report_tapstate;
+	h.report_device = h_report_device;
+	h.report_status = h_report_status;
+	h.report_error = h_report_error;
+	h.realloc = h_realloc;
 	h.user_data = (void *)&u;
 
 	if (libxsvf_play(&h, LIBXSVF_MODE_SCAN) < 0) {

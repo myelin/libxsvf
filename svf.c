@@ -437,10 +437,10 @@ int libxsvf_svf(struct libxsvf_host *h)
 
 		if (!strtokencmp(p, "RUNTEST")) {
 			p += strtokenskip(p);
-			int tck_count = -1;
-			int sck_count = -1;
-			int min_time = -1;
-			int max_time = -1;
+			long tck_count = -1;
+			long sck_count = -1;
+			long min_time = -1;
+			long max_time = -1;
 			while (*p) {
 				int got_maximum = 0;
 				if (!strtokencmp(p, "MAXIMUM")) {
@@ -463,9 +463,9 @@ int libxsvf_svf(struct libxsvf_host *h)
 				}
 				if (*p < '0' || *p > '9')
 					goto syntax_error;
-				int number = 0;
+				long number = 0;
 				int exp = 0, expsign = 1;
-				int number_e6, exp_e6;
+				long number_e6, exp_e6;
 				while (*p >= '0' && *p <= '9') {
 					number = number*10 + (*p - '0');
 					p++;
