@@ -206,17 +206,27 @@ static void h_report_error(struct libxsvf_host *h, const char *file, int line, c
 static void *h_realloc(struct libxsvf_host *h, void *ptr, int size, enum libxsvf_mem which)
 {
 	// Serial.println("realloc");
-	static unsigned char buf_svf_commandbuf[96];
-	static unsigned char buf_svf_sdr_tdi_data[7];
-	static unsigned char buf_svf_sdr_tdi_mask[7];
-	static unsigned char buf_svf_sdr_tdo_data[7];
-	static unsigned char buf_svf_sdr_tdo_mask[7];
+	static unsigned char buf_svf_commandbuf[200];
+	static unsigned char buf_svf_sdr_tdi_data[16];
+	static unsigned char buf_svf_sdr_tdi_mask[16];
+	static unsigned char buf_svf_sdr_tdo_data[16];
+	static unsigned char buf_svf_sdr_tdo_mask[16];
 	static unsigned char buf_svf_sir_tdi_data[1];
 	static unsigned char buf_svf_sir_tdi_mask[1];
 	static unsigned char buf_svf_sir_tdo_data[1];
 	static unsigned char buf_svf_sir_tdo_mask[1];
-	static unsigned char *buflist[15] = { (void*)0, (void*)0, (void*)0, (void*)0, (void*)0, buf_svf_commandbuf, buf_svf_sdr_tdi_data, buf_svf_sdr_tdi_mask, buf_svf_sdr_tdo_data, buf_svf_sdr_tdo_mask, (void*)0, buf_svf_sir_tdi_data, buf_svf_sir_tdi_mask, buf_svf_sir_tdo_data, buf_svf_sir_tdo_mask };
+	static unsigned char *buflist[15] = {
+		(void*)0, (void*)0, (void*)0, (void*)0,
+		(void*)0, buf_svf_commandbuf, buf_svf_sdr_tdi_data, buf_svf_sdr_tdi_mask,
+		buf_svf_sdr_tdo_data, buf_svf_sdr_tdo_mask, (void*)0, buf_svf_sir_tdi_data,
+		buf_svf_sir_tdi_mask, buf_svf_sir_tdo_data, buf_svf_sir_tdo_mask };
 	static int sizelist[15] = { 0, 0, 0, 0, 0, sizeof(buf_svf_commandbuf), sizeof(buf_svf_sdr_tdi_data), sizeof(buf_svf_sdr_tdi_mask), sizeof(buf_svf_sdr_tdo_data), sizeof(buf_svf_sdr_tdo_mask), 0, sizeof(buf_svf_sir_tdi_data), sizeof(buf_svf_sir_tdi_mask), sizeof(buf_svf_sir_tdo_data), sizeof(buf_svf_sir_tdo_mask) };
+	if (which < 15 && size > sizelist[which]) {
+		Serial.print("Error attempting to allocate ");
+		Serial.print(size);
+		Serial.print(" bytes for libxsvf realloc entry ");
+		Serial.println(which);
+	}
 	return which < 15 && size <= sizelist[which] ? buflist[which] : (void*)0;
 }
 
