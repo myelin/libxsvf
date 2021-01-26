@@ -44,6 +44,7 @@
 // #define INTERLACED_READ_WRITE
 
 #include <sys/time.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>

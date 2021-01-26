@@ -470,10 +470,21 @@ int libxsvf_svf(struct libxsvf_host *h)
 					number = number*10 + (*p - '0');
 					p++;
 				}
+				if(*p == '.')
+				{
+					p++;
+					while (*p >= '0' && *p <= '9')
+						p++;
+					// FIXME: accept fractional part
+				}
 				if(*p == 'E' || *p == 'e') {
 					p++;
 					if(*p == '-') {
 						expsign = -1;
+						p++;
+					}
+					if(*p == '+') {
+						expsign = 1;
 						p++;
 					}
 					while (*p >= '0' && *p <= '9') {
